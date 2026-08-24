@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("PATIENT") // PATIENT, DOCTOR, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  patient   Patient?
+  doctor    Doctor?
+}
+
+model Patient {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  dateOfBirth   DateTime?
+  phoneNumber   String?
+  medicalHistory String? @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
+  appointments  Appointment[]
+}
+
+model Doctor {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  specialization  String
+  workingHours    Json      // { start: "09:00", end: "17:00" }
+  slotDuration    Int       @default(30) // minutes
+  consultationFee Float     @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id])
+  appointments    Appointment[]
+  leaveDays       LeaveDay[]
+}
+
+model Appointment {
+  id                  String   @id @default(cuid())
+  doctorId            String
+  patientId           String
+  datetime            DateTime
+  duration            Int      @default(30)
+  status              String   @default("PENDING")
+  symptoms            String   @db.Text
+  additionalInfo      String?  @db.Text
+  preVisitSummary     Json?    // ← Make sure this is Json
+  postVisitSummary    Json?    // ← Make sure this is Json
+  doctorNotes         String?  @db.Text
+  prescription        String?  @db.Text
+  diagnosis           String?  @db.Text
+  calendarEventId     String?
+  version             Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  doctor              Doctor   @relation(fields: [doctorId], references: [id])
+  patient             Patient  @relation(fields: [patientId], references: [id])
+}
+
+model LeaveDay {
+  id        String   @id @default(cuid())
+  doctorId  String
+  date      DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
